@@ -39,23 +39,29 @@
 /******************************************************************************/
 int main(void)
 {
-    struct bma5_dev dev;
+
     int8_t rslt;
     uint8_t n_ints = 1;
     uint8_t n_status = 1;
     uint8_t gpr_ctrl_host = BMA5_ENABLE;
+
+    /* Structure to hold the configurations */
+    struct bma5_dev dev;
     struct bma530_int_map int_map = { 0 };
     struct bma5_int_conf_types int_config = { 0 };
     struct bma530_step_cntr conf = { 0 };
     struct bma530_feat_eng_gpr_0 gpr_0 = { 0 };
     struct bma530_int_status_types int_status = { 0 };
     struct bma530_feat_eng_feat_out feat_out = { 0 };
-    enum bma5_context context;
 
+    /* Mapping to hardware interrupt pin on sensor */
     int_config.int_src = BMA5_INT_2;
+
+    /* Variable to hold configurations related to interrupt pin */
     int_status.int_src = BMA530_INT_STATUS_INT2;
 
     /* Assign context parameter selection */
+    enum bma5_context context;
     context = BMA5_SMARTPHONE;
 
     /* Interface reference is given as a parameter
@@ -65,14 +71,16 @@ int main(void)
     rslt = bma5_interface_init(&dev, BMA5_SPI_INTF, context);
     bma5_check_rslt("bma5_interface_init", rslt);
 
+    /* Initialize the device BMA530 */
     rslt = bma530_init(&dev);
     bma5_check_rslt("bma530_init", rslt);
-    printf("BMA530 Chip ID is 0x%X\n", dev.chip_id);
+    printf("Chip ID:0x%x\n\n", dev.chip_id);
 
     /* Map hardware interrupt pin configurations */
     rslt = bma5_get_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_get_int_conf", rslt);
 
+    /* Set the interrupt configurations */
     int_config.int_conf.int_mode = BMA5_INT2_MODE_LATCHED;
     int_config.int_conf.int_od = BMA5_INT2_OD_PUSH_PULL;
     int_config.int_conf.int_lvl = BMA5_INT2_LVL_ACTIVE_HIGH;
@@ -80,13 +88,24 @@ int main(void)
     rslt = bma5_set_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_set_int1_conf", rslt);
 
+    printf("\nInterrupt configurations\n");
+    printf("\nINT1 Mode : %s\t\n", enum_to_string(BMA5_INT2_MODE_LATCHED));
+    printf("INT1 Output type : %s\t\n", enum_to_string(BMA5_INT2_OD_PUSH_PULL));
+    printf("INT1 Active level : %s\t\n", enum_to_string(BMA5_INT2_LVL_ACTIVE_HIGH));
+
     rslt = bma530_get_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_get_feat_eng_gpr_0", rslt);
 
+    /* Enable step counter */
     gpr_0.step_en = BMA5_ENABLE;
 
     rslt = bma530_set_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_set_feat_eng_gpr_0", rslt);
+
+    if (rslt == BMA5_OK)
+    {
+        printf("\nStep counter enabled\n");
+    }
 
     rslt = bma5_set_regs(BMA5_REG_FEAT_ENG_GPR_CTRL, &gpr_ctrl_host, 1, &dev);
     bma5_check_rslt("bma5_set_regs", rslt);
@@ -165,6 +184,7 @@ int main(void)
     rslt = bma530_set_step_counter_config(&conf, &dev);
     bma5_check_rslt("bma530_set_step_counter_config", rslt);
 
+    /* Map generic interrupts to hardware interrupt pin of the sensor */
     rslt = bma530_get_int_map(&int_map, &dev);
     bma5_check_rslt("bma530_get_int_map", rslt);
 
@@ -172,6 +192,11 @@ int main(void)
     int_map.step_cnt_int_map = BMA530_STEP_CNT_INT_MAP_INT2;
     rslt = bma530_set_int_map(&int_map, &dev);
     bma5_check_rslt("bma530_set_int_map", rslt);
+
+    if (rslt == BMA5_OK)
+    {
+        printf("Step counter interrupt mapped to INT2\n");
+    }
 
     rslt = bma530_get_step_counter_config(&conf, &dev);
     bma5_check_rslt("bma530_get_step_counter_config", rslt);
@@ -185,9 +210,11 @@ int main(void)
 
     for (;;)
     {
+        /* Check for the interrupt */
         rslt = bma530_get_int_status(&int_status, n_status, &dev);
         bma5_check_rslt("bma530_get_int_status", rslt);
 
+        /* Check for the step counter interrupt */
         if (int_status.int_status.step_cnt_int_status & BMA5_ENABLE)
         {
             printf("Step counter interrupt occurred\n");

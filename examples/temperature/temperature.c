@@ -46,10 +46,11 @@ int main(void)
     struct bma5_sensor_status status;
     uint8_t temperature = 0;
     int8_t temp_celsius = 0;
-
-    enum bma5_context context;
+    uint8_t iteration = 50;
 
     /* Assign context parameter selection */
+    enum bma5_context context;
+
     context = BMA5_SMARTPHONE;
 
     /* Interface reference is given as a parameter
@@ -59,14 +60,16 @@ int main(void)
     rslt = bma5_interface_init(&dev, BMA5_SPI_INTF, context);
     bma5_check_rslt("bma5_interface_init", rslt);
 
+    /* Initialize the device */
     rslt = bma530_init(&dev);
     bma5_check_rslt("bma530_init", rslt);
-    printf("BMA530 Chip ID is 0x%X\n", dev.chip_id);
+    printf("Chip ID:0x%x\n\n", dev.chip_id);
 
     /* Get temperature config */
     rslt = bma5_get_temp_conf(&config, &dev);
     bma5_check_rslt("bma5_get_temp_conf", rslt);
 
+    /* Set temperature configuration */
     config.temp_rate = BMA5_TEMP_RATE_HZ_25;
     config.temp_meas_src = BMA5_TEMP_MEAS_SRC_TMP_INT;
     config.temp_ext_sel = BMA5_TEMP_EXT_SEL_INT2;
@@ -75,14 +78,20 @@ int main(void)
     rslt = bma5_set_temp_conf(&config, &dev);
     bma5_check_rslt("bma5_set_temp_conf", rslt);
 
+    printf("Temperature configurations\n");
+    printf("Temperature rate: %s\t\n", enum_to_string(BMA5_TEMP_RATE_HZ_25));
+    printf("Temperature measurement source: %s\t\n", enum_to_string(BMA5_TEMP_MEAS_SRC_TMP_INT));
+    printf("Temperature external selection: %s\t\n", enum_to_string(BMA5_TEMP_EXT_SEL_INT2));
+
     printf("\nCount, Temparature data\n");
 
-    while (loop < 50)
+    while (loop < iteration)
     {
         /* Get temperature data ready status */
         rslt = bma5_get_sensor_status(&status, &dev);
         bma5_check_rslt("bma5_get_sensor_status", rslt);
 
+        /* Check if temperature data is ready */
         if (status.temperature_rdy & BMA5_ENABLE)
         {
             rslt = bma5_set_sensor_status(&status, &dev);
