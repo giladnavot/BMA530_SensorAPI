@@ -61,17 +61,18 @@ int main(void)
      *         For I2C : BMA5_I2C_INTF
      *         For SPI : BMA5_SPI_INTF
      */
-    rslt = bma5_interface_init(&dev, BMA5_SPI_INTF, context);
+    rslt = bma5_interface_init(&dev, BMA5_I2C_INTF, context);
     bma5_check_rslt("bma5_interface_init", rslt);
 
     rslt = bma530_init(&dev);
     bma5_check_rslt("bma530_init", rslt);
-    printf("BMA530 Chip ID is 0x%X\n", dev.chip_id);
+    printf("Chip ID:0x%x\n\n", dev.chip_id);
 
     /* Map hardware interrupt pin configurations */
     rslt = bma5_get_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_get_int_conf", rslt);
 
+    /*Interrupt Configurations */
     int_config.int_conf.int_mode = BMA5_INT1_MODE_PULSED_SHORT;
     int_config.int_conf.int_od = BMA5_INT1_OD_OPEN_DRAIN;
     int_config.int_conf.int_lvl = BMA5_INT1_LVL_ACTIVE_LOW;
@@ -79,13 +80,24 @@ int main(void)
     rslt = bma5_set_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_set_int_conf", rslt);
 
+    printf("Interrupt configurations\n");
+    printf("\nINT1 Mode = %s\t\n", enum_to_string(BMA5_INT1_MODE_PULSED_SHORT));
+    printf("INT1 Output type = %s\t\n", enum_to_string(BMA5_INT1_OD_OPEN_DRAIN));
+    printf("INT1 Active level = %s\t\n", enum_to_string(BMA5_INT1_LVL_ACTIVE_LOW));
+
     rslt = bma530_get_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_get_feat_eng_gpr_0", rslt);
 
+    /* Enable step counter */
     gpr_0.step_en = 0x01;
 
     rslt = bma530_set_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_set_feat_eng_gpr_0", rslt);
+
+    if (rslt == BMA5_OK)
+    {
+        printf("\nStep counter enabled\n");
+    }
 
     rslt = bma5_set_regs(BMA5_REG_FEAT_ENG_GPR_CTRL, &gpr_ctrl_host, 1, &dev);
     bma5_check_rslt("bma5_set_regs", rslt);
@@ -126,6 +138,7 @@ int main(void)
     printf("step_duration_window :: 0x%x\n", conf.step_duration_window);
     printf("watermark_level :: 0x%x\n", conf.watermark_level);
 
+    /* Set step counter configurations */
     conf.acc_mean_decay_coeff = 0xEAC8;
     conf.activity_detection_factor = 0x3;
     conf.activity_detection_thres = 0xF3C;
@@ -161,6 +174,7 @@ int main(void)
     rslt = bma530_set_step_counter_config(&conf, &dev);
     bma5_check_rslt("bma530_set_step_counter_config", rslt);
 
+    /* Get the interrupt mapping */
     rslt = bma530_get_int_map(&int_map, &dev);
     bma5_check_rslt("bma530_get_int_map", rslt);
 
@@ -173,9 +187,11 @@ int main(void)
 
     for (;;)
     {
+        /* Get the interrupt status */
         rslt = bma530_get_int_status(&int_status, n_status, &dev);
         bma5_check_rslt("bma530_get_int_status", rslt);
 
+        /* Check if step detector interrupt occurred */
         if (int_status.int_status.step_det_int_status & BMA5_ENABLE)
         {
             rslt = bma530_set_int_status(&int_status, n_status, &dev);

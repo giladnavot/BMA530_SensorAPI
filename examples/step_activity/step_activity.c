@@ -39,11 +39,13 @@
 /******************************************************************************/
 int main(void)
 {
-    struct bma5_dev dev;
     int8_t rslt;
     uint16_t loop = 10;
     uint8_t n_ints = 1;
     uint8_t gpr_ctrl_host = BMA5_ENABLE;
+
+    /*Structue to hold the configurations */
+    struct bma5_dev dev;
     struct bma5_int_conf_types int_config = { 0 };
     struct bma530_step_cntr conf = { 0 };
     struct bma530_feat_eng_gpr_0 gpr_0 = { 0 };
@@ -52,6 +54,7 @@ int main(void)
     /* The step activities are listed in array. */
     const char *activity_output[4] = { "UNKNOWN", "STILL", "WALKING", "RUNNING" };
 
+    /* Mapping to hardware interrupt pin on sensor */
     int_config.int_src = BMA5_INT_1;
 
     /* Assign context parameter selection */
@@ -65,14 +68,16 @@ int main(void)
     rslt = bma5_interface_init(&dev, BMA5_SPI_INTF, context);
     bma5_check_rslt("bma5_interface_init", rslt);
 
+    /* Initialize the device BMA530 */
     rslt = bma530_init(&dev);
     bma5_check_rslt("bma530_init", rslt);
-    printf("BMA530 Chip ID is 0x%X\n", dev.chip_id);
+    printf("Chip ID:0x%x\n\n", dev.chip_id);
 
     /* Map hardware interrupt pin configurations */
     rslt = bma5_get_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_get_int_conf", rslt);
 
+    /* Set the interrupt configurations */
     int_config.int_conf.int_mode = BMA5_INT1_MODE_LATCHED;
     int_config.int_conf.int_od = BMA5_INT1_OD_PUSH_PULL;
     int_config.int_conf.int_lvl = BMA5_INT1_LVL_ACTIVE_HIGH;
@@ -80,13 +85,28 @@ int main(void)
     rslt = bma5_set_int_conf(&int_config, n_ints, &dev);
     bma5_check_rslt("bma5_set_int_conf", rslt);
 
+    if (rslt == BMA5_OK)
+    {
+        printf("Hardware interrupt pin 1 configurations done\n");
+    }
+
+    printf("Int1 mode: %s\n", enum_to_string(BMA5_INT1_MODE_LATCHED));
+    printf("Int1 OD: %s\n", enum_to_string(BMA5_INT1_OD_PUSH_PULL));
+    printf("Int1 Level: %s\n", enum_to_string(BMA5_INT1_LVL_ACTIVE_HIGH));
+
     rslt = bma530_get_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_get_feat_eng_gpr_0", rslt);
 
+    /* Enable step counter */
     gpr_0.step_en = BMA5_ENABLE;
 
     rslt = bma530_set_feat_eng_gpr_0(&gpr_0, &dev);
     bma5_check_rslt("bma530_set_feat_eng_gpr_0", rslt);
+
+    if (rslt == BMA5_OK)
+    {
+        printf("\nStep counter enabled\n");
+    }
 
     rslt = bma5_set_regs(BMA5_REG_FEAT_ENG_GPR_CTRL, &gpr_ctrl_host, 1, &dev);
     bma5_check_rslt("bma5_set_regs", rslt);
@@ -127,6 +147,7 @@ int main(void)
     printf("step_duration_window :: 0x%x\n", conf.step_duration_window);
     printf("watermark_level :: 0x%x\n", conf.watermark_level);
 
+    /* Set the configurations */
     conf.acc_mean_decay_coeff = 0xEAC8;
     conf.activity_detection_factor = 0x3;
     conf.activity_detection_thres = 0xF3C;

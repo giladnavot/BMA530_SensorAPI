@@ -90,18 +90,19 @@ int main(void)
     struct bma530_feat_eng_gpr_0 config = { 0 };
     struct bma530_int_map map_config = { 0 };
 
+    /* Assign context parameter selection */
     enum bma5_context context;
 
-    /* Assign context parameter selection */
     context = BMA5_SMARTPHONE;
 
     /* Interface reference is given as a parameter
      *         For I2C : BMA5_I2C_INTF
      *         For SPI : BMA5_SPI_INTF
      */
-    rslt = bma5_interface_init(&dev, BMA5_I2C_INTF, context);
+    rslt = bma5_interface_init(&dev, BMA5_SPI_INTF, context);
     bma5_check_rslt("bma5_interface_init", rslt);
 
+    /* Initialize BMA530 */
     rslt = bma530_init(&dev);
     bma5_check_rslt("bma530_init", rslt);
 
@@ -355,13 +356,15 @@ static int8_t read_accel_samples(uint8_t count,
     struct bma530_int_status_types int_status = { 0 };
     struct bma5_accel sens_data = { 0 };
     uint8_t n_status = 1;
+    uint8_t limit = 1;
     float x = 0, y = 0, z = 0;
 
+    /* Set interrupt pin 1 configurations */
     int_status.int_src = BMA530_INT_STATUS_INT1;
 
     printf("\nCount, Accel_LSB_X, Accel_LSB_Y, Accel_LSB_Z, Acc_mg_X, Acc_mg_Y, Acc_mg_Z\n");
 
-    while (count >= 1)
+    while (count >= limit)
     {
         /* Get accel data ready status */
         rslt = bma5_get_sensor_status(&status, dev);
@@ -373,6 +376,7 @@ static int8_t read_accel_samples(uint8_t count,
             rslt = bma530_get_int_status(&int_status, n_status, dev);
             bma5_check_rslt("bma530_get_int_status", rslt);
 
+            /* Check for accel data ready interrupt */
             if (int_status.int_status.acc_drdy_int_status & BMA530_ACC_DRDY_INT_STATUS_MSK)
             {
                 rslt = bma5_set_sensor_status(&status, dev);
@@ -395,7 +399,7 @@ static int8_t read_accel_samples(uint8_t count,
                 z = lsb_to_mg(sens_data.z, (float)8, BMA5_16_BIT_RESOLUTION);
 
                 /* Print the data in mg */
-                printf("%d,  %d,  %d,  %d,  %4.2f,  %4.2f,  %4.2f\n",
+                printf("%4d  %11d  %11d  %11d  %9.2f  %9.2f  %9.2f\n",
                        count,
                        sens_data.x,
                        sens_data.y,
