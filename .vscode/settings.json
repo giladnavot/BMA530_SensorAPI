@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "bma530_features.h": "c",
+        "bma5.h": "c",
+        "common.h": "c"
+    }
+}
